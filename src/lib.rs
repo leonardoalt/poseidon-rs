@@ -3,21 +3,37 @@ extern crate rand;
 extern crate ff;
 use ff::*;
 
-#[derive(PrimeField)]
-#[PrimeFieldModulus = "21888242871839275222246405745257275088548364400416034343698204186575808495617"]
-#[PrimeFieldGenerator = "7"]
-pub struct Fr(FrRepr);
+pub use bn128::Fr;
+pub use pallas::PallasField;
+
+mod bn128 {
+    use super::*;
+
+    #[derive(PrimeField)]
+    #[PrimeFieldModulus = "21888242871839275222246405745257275088548364400416034343698204186575808495617"]
+    #[PrimeFieldGenerator = "7"]
+    pub struct Fr(FrRepr);
+}
+
+mod pallas {
+    use super::*;
+
+    #[derive(PrimeField)]
+    #[PrimeFieldModulus = "28948022309329048855892746252171976963363056481941647379679742748393362948097"]
+    #[PrimeFieldGenerator = "5"]
+    pub struct PallasField(FrRepr);
+}
 
 mod constants;
 
 #[derive(Debug)]
-pub struct Constants {
+pub struct Constants<Fr: PrimeField> {
     pub c: Vec<Vec<Fr>>,
     pub m: Vec<Vec<Vec<Fr>>>,
     pub n_rounds_f: usize,
     pub n_rounds_p: Vec<usize>,
 }
-pub fn load_constants() -> Constants {
+pub fn load_constants<Fr: PrimeField>() -> Constants<Fr> {
     let (c_str, m_str) = constants::constants();
     let mut c: Vec<Vec<Fr>> = Vec::new();
     for i in 0..c_str.len() {
@@ -49,11 +65,14 @@ pub fn load_constants() -> Constants {
     }
 }
 
-pub struct Poseidon {
-    constants: Constants,
+pub type Bn128Poseidon = Poseidon<bn128::Fr>;
+pub type PallasPoseidon = Poseidon<pallas::PallasField>;
+
+pub struct Poseidon<Fr: PrimeField> {
+    constants: Constants<Fr>,
 }
-impl Poseidon {
-    pub fn new() -> Poseidon {
+impl<Fr: PrimeField> Poseidon<Fr> {
+    pub fn new() -> Poseidon<Fr> {
         Poseidon {
             constants: load_constants(),
         }
@@ -117,6 +136,7 @@ impl Poseidon {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bn128::*;
 
     #[test]
     fn test_ff() {
@@ -139,7 +159,7 @@ mod tests {
 
     #[test]
     fn test_load_constants() {
-        let cons = load_constants();
+        let cons = load_constants::<Fr>();
         assert_eq!(
             cons.c[0][0].to_string(),
             "Fr(0x09c46e9ec68e9bd4fe1faaba294cba38a71aa177534cdd1b6c7dc0dbd0abd7a7)"
